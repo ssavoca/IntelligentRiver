@@ -1,0 +1,91 @@
+var i=0;
+var previous_system_time = 0;
+var previous_database_time = 0;
+function publish(rows)
+{
+	
+	
+	
+	
+	   var timestamp = rows[i].timestamp;
+		var motestack = rows[i].motestack;   
+		var temperature = rows[i].temperature;
+		var spcond = rows[i].spcond;
+		var ph = rows[i].ph;   
+		var depth = rows[i].depth;
+		var power = rows[i].power;   
+		var turbidity = rows[i].turbidity;
+		var piezoresistance = rows[i].piezoresistance
+		var mgl_odo_sat = rows[i].mgl_odo_sat
+		
+		
+		deviceClient.publish("status","json",'{"d" : { "time" : \"'+timestamp+'\" , "mote" : \"'+motestack+'\" , "temp" : \"'+temperature+'\" , "spcond" : \"'+spcond+'\" , "ph" : \"'+ph+'\" , "depth" : \"'+depth+'\" , "turbidity" : \"'+turbidity+'\", "power" : \"'+power+'\" , "piezoresistance" : \"'+piezoresistance+'\" , "mgl_odo_sat" : \"'+mgl_odo_sat+'\" }}', 1);
+		console.log("status","json",'{"d" : { "time" : \"'+timestamp+'\" , "mote" : \"'+motestack+'\" , "temp" : \"'+temperature+'\" , "spcond" : \"'+spcond+'\" , "ph" : \"'+ph+'\" , "depth" : \"'+depth+'\" , "turbidity" : \"'+turbidity+'\", "power" : \"'+power+'\" , "piezoresistance" : \"'+piezoresistance+'\" , "mgl_odo_sat" : \"'+mgl_odo_sat+'\" }}', 1);
+		i=i+1;
+	
+	 
+}
+
+var mysql = require("mysql");
+var Client = require('ibmiotf');
+
+// First you need to create a connection to the db
+var con = mysql.createConnection({
+  host: "130.127.49.214",
+  user: "sim_app",//sim_app
+  password: "irviewer",
+  database: "intelligentriver"
+});
+
+con.connect(function(err){
+  if(err){
+    console.log('Error connecting to Db');
+    return;
+  }
+  console.log('Connection established');
+});
+
+
+var config = {
+    "org" : "hbp995",
+    "id" : "cpu1984",
+    "domain": "internetofthings.ibmcloud.com",
+    "type" : "CPU_Sensor",
+    "auth-method" : "token",
+    "auth-token" : "3345387539"
+};
+var deviceClient = new Client.IotfDevice(config);
+
+deviceClient.connect();
+var rows =[]
+
+
+deviceClient.on('connect', function () {
+
+console.log("Device Connected")
+
+con.query('SELECT * FROM `observations` Order by `timestamp` LIMIT 180  ',function(err,sqlrows){
+     if(err) throw err;
+	rows = sqlrows;
+	console.log('Data received from Db:\n');
+    setInterval(publish,5000,rows)
+
+  });
+  con.end(function(err) {
+  // The connection is terminated gracefully
+  // Ensures all previously enqueued queries are still
+  // before sending a COM_QUIT packet to the MySQL server.
+  });
+
+//});
+
+	
+});
+
+
+  
+  
+
+deviceClient.on("error", function (err) {
+    console.log("Error : **************************************************************************************************************************************************"+err);
+});
